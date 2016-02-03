@@ -1,0 +1,30 @@
+{
+  "name": "meme-js",
+  "version": "0.0.1",
+  "description": "Javascript applet for meme upload/building",
+  "main": "meme.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mbiokyle29/meme-js.git"
+  },
+  "keywords": [
+    "javascript",
+    "meme",
+    "maker"
+  ],
+  "author": [
+    "@mbiokyle29",
+    "@mpkogli"
+  ],
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/mbiokyle29/meme-js/issues"
+  },
+  "homepage": "https://github.com/mbiokyle29/meme-js#readme",
+  "devDependencies": {
+    "webpack": "^1.12.12"
+  }
+}
