@@ -1,0 +1,15 @@
+#meme-menu {
+    background-color: rgba(24, 24, 25, .8);
+    display: flex; 
+    justify-content: space-between;
+}
+
+#background {
+    position: absolute;
+    z-index: 0;
+}
+
+#foreground {
+    position: absolute;
+    z-index: 1;
+}
