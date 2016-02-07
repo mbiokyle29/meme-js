@@ -1,2 +1,8 @@
 node_modules
-dist/meme.js
+dist/Meme.js
+dist/*.png
+dist/*.woff
+dist/*.ttf
+dist/*.eot
+dist/*.svg
+dist/*.woff2
