@@ -1,3 +1,4 @@
-Meme = require('./meme.js');
-require("./style.css");
+var path = require('path');
+Meme = require(path.join('.',' meme.js'));
+require(path.join('.', "style.css"));
 require("font-awesome-webpack");
