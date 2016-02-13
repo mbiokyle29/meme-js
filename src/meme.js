@@ -2,16 +2,24 @@ var $ = require("jquery");
 var defaultImg = require("./img/default.png");
 var Konva = require("konva");
 
-function Meme(div_id, defaultImage) {
+function Meme(div_id, defaultImage, templateUrl, memeUrl) {
     
     //init
-    this.div_id = div_id
+    this.div_id = div_id;
+
+    if(defaultImage === undefined) {
+        this.defaultImage = defaultImg;    
+    } else {
+        this.defaultImage = defaultImage;
+    }
+
+    this.templateUrl = templateUrl;
+    this.memeUrl = memeUrl;
+
     this.initCanvas();
     this.initMenu();
 
 }
-
-Meme.prototype.defaultImage = defaultImg;
 
 Meme.prototype.initCanvas = function() {
 
@@ -49,8 +57,8 @@ Meme.prototype.initCanvas = function() {
             x: 0,
             y: 0,
             image: backgroundImage,
-            width: this.canvasWidth,
-            height: this.canvasHeight
+            width: self.canvasWidth,
+            height: self.canvasHeight
         });
 
         self.backgroundLayer.add(self.backgroundImage)
@@ -66,12 +74,18 @@ Meme.prototype.initMenu = function() {
 
     var menuWidth = this.canvasWidth;
 
-    $(menuDiv).append("<button id=\"new\" class=\"btn\"> \
-        <i class=\"fa fa-4x fa-fw fa-plus\"></i> \
-        </button>");
+    $(menuDiv).append(
+        "<button id=\"new\"  class=\"btn\">\
+            <i class=\"fa fa-4x fa-fw fa-plus\"></i> \
+        </button> \
+        <input type=\"file\" id=\"hidden-input\"></input>");
 
     $(menuDiv).append("<a><button id=\"save\" class=\"btn\"> \
         <i class=\"fa fa-4x fa-fw fa-floppy-o\"></i> \
+        </button></a>");
+
+    $(menuDiv).append("<a><button id=\"upload\" class=\"btn\"> \
+        <i class=\"fa fa-4x fa-fw fa-upload\"></i> \
         </button></a>");
 
     $(menuDiv).append("<button id=\"clear\" class=\"btn\"> \
@@ -85,14 +99,80 @@ Meme.prototype.initMenu = function() {
     var self = this;
 
     function downloadCanvas(link, filename) {
-        console.log("DL");
         link.href = self.stage.toDataURL();
         link.download = filename;
     }
+
+    function handleImage(e){
+
+        var reader = new FileReader();
+        reader.onload = function(event){
+            
+            var img = new Image();
+            img.onload = function(){
+
+                self.backgroundImage = new Konva.Image({
+                    x: 0,
+                    y: 0,
+                    image: img,
+                    width: self.canvasWidth,
+                    height: self.canvasHeight
+                });
+
+                self.backgroundLayer.clear();
+                self.backgroundLayer.add(self.backgroundImage)
+                self.backgroundLayer.draw();
+            }
+            img.src = event.target.result;
+        }
+        reader.readAsDataURL(e.target.files[0]);     
+    }
+
+    function sendTemplateToServer() {
+        var dataUrl = self.stage.toDataURL();
+        $.ajax({
+          type: "POST",
+          url: self.templateUrl,
+          data: { 
+             imgBase64: dataURL
+          }
+        }).done(function(o) {
+          console.log('template saved'); 
+        });
+    }
+
+    function sendMemeToServer() {
+        var dataUrl = self.stage.toDataURL();
+        $.ajax({
+          type: "POST",
+          url: self.memeUrl,
+          data: { 
+             imgBase64: dataURL
+          }
+        }).done(function(o) {
+          console.log('meme saved'); 
+        });
+    }
     
+    // pending CORS    
     $("#save").on('click tap', function() {
         downloadCanvas(this, "berning-meme.png");
     });
+
+    // upload
+    $("#upload").on('click tap', function() {
+
+    });
+
+    // HACK
+    $("#new").on('click tap', function(e) {
+        $("#hidden-input").click();
+    });
+
+    $("#hidden-input").on('change', function(e) {
+        handleImage(e);
+    });
+    // END HACK
 
     $("#clear").on('click tap', function(){
         self.textLayer.clear();
