@@ -1,6 +1,6 @@
 var path = require("path");
 var $ = require("jquery");
-var defaultImg = require(path.join(__dirname, "img", "default.png"));
+var defaultImg = require(path.join(".", "img", "default.png"));
 var Konva = require("konva");
 
 function Meme(div_id, defaultImage, templateUrl, memeUrl) {
