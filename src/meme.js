@@ -180,11 +180,11 @@ Meme.prototype.initMenu = function() {
 }
 
 Meme.prototype.addText = function(text, x, y) {
-
+     savedUserText = prompt('Enter your text');
     var newText = new Konva.Text({
       x: x,
       y: y,
-      text: '#BERN',
+      text: savedUserText,
       fontSize: 50,
       fontFamily: 'Impact',
       fill: 'white',
@@ -193,10 +193,11 @@ Meme.prototype.addText = function(text, x, y) {
     });
 
     newText.on('dblclick dbltap', function(evt) {
-        this.setText("#BERN#BERN");
+       console.log('double tapped');
+        this.setText.text("#BERN#BERN");
         this.draw();
     });
-
+  
     this.textLayer.add(newText);
     newText.draw();
 }
