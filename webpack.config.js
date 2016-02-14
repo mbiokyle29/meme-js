@@ -1,11 +1,12 @@
 var webpack = require('webpack');
+var path = require('path');
 
 module.exports = {
 
-    entry: __dirname+"/src/main.js",
+    entry: path.join(__dirname, "src", "main.js"),
 
     output: {
-        path: __dirname +"/dist/",
+        path: path.join(__dirname, "dist"),
         filename: "Meme.js",
     },
 
@@ -18,5 +19,4 @@ module.exports = {
             { test: /\.(ttf|eot|svg)(\?v=[0-9]\.[0-9]\.[0-9])?$/, loader: "file-loader" }
         ]
     },
-
 };

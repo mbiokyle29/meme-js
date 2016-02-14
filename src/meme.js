@@ -1,233 +1,206 @@
 var $ = require("jquery");
 var defaultImg = require("./img/default.png");
+var Konva = require("konva");
 
-function Meme(div_id, defaultImage) {
-
+function Meme(div_id, defaultImage, templateUrl, memeUrl) {
+    
     //init
-    this.div_id = div_id
+    this.div_id = div_id;
+
+    if(defaultImage === undefined) {
+        this.defaultImage = defaultImg;    
+    } else {
+        this.defaultImage = defaultImage;
+    }
+
+    this.templateUrl = templateUrl;
+    this.memeUrl = memeUrl;
+
     this.initCanvas();
-    this.loadDefaultMeme();
+    this.initMenu();
 
-    // variables used to get mouse position on the canvas
-    this.canvas = $("#foreground");
-    this.offset = this.canvas.offset();
-    this.offsetX = this.offset.left;
-    this.offsetY = this.offset.top;
-    this.scrollX = this.canvas.scrollLeft();
-    this.scrollY = this.canvas.scrollTop();
-
-    // variables to save last mouse position
-    // used to see how far the user dragged the mouse
-    // and then move the text by that distance
-    this.startX;
-    this.startY;
-
-    // an array to hold text objects
-    this.texts = []
-
-    // this var will hold the index of the hit-selected text
-    this.selectedText = -1;
-    var self = this;
-
-    // listen for mouse events
-    $("#foreground").mousedown(function (e) {
-        self._handleMouseDown(e);
-    });
-    $("#foreground").mousemove(function (e) {
-        self._handleMouseMove(e);
-    });
-    $("#foreground").mouseup(function (e) {
-        self._handleMouseUp(e);
-    });
-    $("#foreground").mouseout(function (e) {
-        self._handleMouseOut(e);
-    });
-    $("#foreground").dblclick(function(e) {
-        self._handleMoustDoubleClick(e);
-    });
 }
-
-Meme.prototype.defaultImage = defaultImg;
 
 Meme.prototype.initCanvas = function() {
 
-    // fetch the root div element
-    var div = $("#"+this.div_id).get(0);
-    $(div).empty();
-
-    if(div === null) {
-        console.log("Cannot fetch div element by id: "+div_id);
-        return;
-    }
-
-    // set up layers
-    this.background = $("<canvas id=\"background\"></canvas>").appendTo(div).get(0);
-    this.foreground = $("<canvas id=\"foreground\"></canvas>").appendTo(div).get(0);
-
-    this.backgroundCtx = this.background.getContext('2d');
-    this.foregroundCtx = this.foreground.getContext('2d');
-
     var deviceWidth = window.innerWidth;
-    
-    canvasWidth = Math.min(600, deviceWidth-20);
-    canvasHeight = Math.min(480, deviceWidth-20);
-    
-    this.background.width = canvasWidth;
-    this.background.height = canvasHeight;
+    var self = this;
 
-    this.foreground.width = canvasWidth;
-    this.foreground.height = canvasHeight;
+    this.canvasWidth = Math.min(600, deviceWidth-20);
+    this.canvasHeight = Math.min(480, deviceWidth-20);
+    
+    this.stage = new Konva.Stage({
+      container: this.div_id,
+      width: this.canvasWidth,
+      height: this.canvasHeight
+    });
 
-    // make the menu
-    $("<div id='meme-menu'></div>").insertAfter(this.foreground);
+    this.backgroundLayer = new Konva.Layer();
+    this.textLayer = new Konva.Layer();
+
+    this.backgroundLayer.on("dblclick dbltap", function(evt) {
+        var mousePos = self.stage.getPointerPosition();
+        self.addText("#BERN", mousePos.x, mousePos.y);
+    });
+
+    this.stage.add(this.backgroundLayer);
+    this.stage.add(this.textLayer)
+    
+    // background image + layer
+    var backgroundImage = new Image();
+    //backgroundImage.crossOrigin = "Anonymous";
+    backgroundImage.src = this.defaultImage;
+
+    backgroundImage.onload = function() {
+
+        self.backgroundImage = new Konva.Image({
+            x: 0,
+            y: 0,
+            image: backgroundImage,
+            width: self.canvasWidth,
+            height: self.canvasHeight
+        });
+
+        self.backgroundLayer.add(self.backgroundImage)
+        self.backgroundLayer.draw();
+    }
+}
+
+Meme.prototype.initMenu = function() {
+
+    $("#"+this.div_id).append("<div id='meme-menu'></div>");
     var menuDiv = $("#meme-menu").get(0);
-    $(menuDiv).width(canvasWidth);
+    $(menuDiv).width(this.canvasWidth);
 
-    var menuWidth = canvasWidth;
+    var menuWidth = this.canvasWidth;
 
-    $(menuDiv).append("<button class=\"btn\"> \
-        <i class=\"fa fa-4x fa-fw fa-plus\"></i> \
-        </button>");
+    $(menuDiv).append(
+        "<button id=\"new\"  class=\"btn\">\
+            <i class=\"fa fa-4x fa-fw fa-plus\"></i> \
+        </button> \
+        <input type=\"file\" id=\"hidden-input\"></input>");
 
-    $(menuDiv).append("<button class=\"btn\"> \
+    $(menuDiv).append("<a><button id=\"save\" class=\"btn\"> \
         <i class=\"fa fa-4x fa-fw fa-floppy-o\"></i> \
-        </button>");
+        </button></a>");
 
-    $(menuDiv).append("<button class=\"btn\"> \
+    $(menuDiv).append("<a><button id=\"upload\" class=\"btn\"> \
+        <i class=\"fa fa-4x fa-fw fa-upload\"></i> \
+        </button></a>");
+
+    $(menuDiv).append("<button id=\"clear\" class=\"btn\"> \
         <i class=\"fa fa-4x fa-fw fa-close\"></i> \
         </button>");
 
-    $(menuDiv).append("<button class=\"btn\"> \
+    $(menuDiv).append("<button id=\"help\" class=\"btn\"> \
         <i class=\"fa fa-4x fa-fw fa-question\"></i> \
-        </button>"); 
-}
-
-Meme.prototype.loadDefaultMeme = function() {
-    
-    var image = new Image();
-    image.src = this.defaultImage;
+        </button>");
 
     var self = this;
 
-    image.onload = function() {
-        self.backgroundCtx.drawImage(image, 0, 0, image.width, image.height, 
-            0, 0, self.background.width, self.background.height);
-    } 
+    function downloadCanvas(link, filename) {
+        link.href = self.stage.toDataURL();
+        link.download = filename;
+    }
+
+    function handleImage(e){
+
+        var reader = new FileReader();
+        reader.onload = function(event){
+            
+            var img = new Image();
+            img.onload = function(){
+
+                self.backgroundImage = new Konva.Image({
+                    x: 0,
+                    y: 0,
+                    image: img,
+                    width: self.canvasWidth,
+                    height: self.canvasHeight
+                });
+
+                self.backgroundLayer.clear();
+                self.backgroundLayer.add(self.backgroundImage)
+                self.backgroundLayer.draw();
+            }
+            img.src = event.target.result;
+        }
+        reader.readAsDataURL(e.target.files[0]);     
+    }
+
+    function sendTemplateToServer() {
+        var dataUrl = self.stage.toDataURL();
+        $.ajax({
+          type: "POST",
+          url: self.templateUrl,
+          data: { 
+             imgBase64: dataURL
+          }
+        }).done(function(o) {
+          console.log('template saved'); 
+        });
+    }
+
+    function sendMemeToServer() {
+        var dataUrl = self.stage.toDataURL();
+        $.ajax({
+          type: "POST",
+          url: self.memeUrl,
+          data: { 
+             imgBase64: dataURL
+          }
+        }).done(function(o) {
+          console.log('meme saved'); 
+        });
+    }
+    
+    // pending CORS    
+    $("#save").on('click tap', function() {
+        downloadCanvas(this, "berning-meme.png");
+    });
+
+    // upload
+    $("#upload").on('click tap', function() {
+
+    });
+
+    // HACK
+    $("#new").on('click tap', function(e) {
+        $("#hidden-input").click();
+    });
+
+    $("#hidden-input").on('change', function(e) {
+        handleImage(e);
+    });
+    // END HACK
+
+    $("#clear").on('click tap', function(){
+        self.textLayer.clear();
+    }); 
 }
 
 Meme.prototype.addText = function(text, x, y) {
+     savedUserText = prompt('Enter your text');
+    var newText = new Konva.Text({
+      x: x,
+      y: y,
+      text: savedUserText,
+      fontSize: 50,
+      fontFamily: 'Impact',
+      fill: 'white',
+      stroke: 'black',
+      draggable: true
+    });
 
-    // get the text from the input element
-    var text = {
-        text: text,
-        x: x,
-        y: y
-    };
-
-    // calc the size of this text for hit-testing purposes
-    this.foregroundCtx.font = "30px verdana";
-    text.width = this.foregroundCtx.measureText(text.text).width;
-    text.height = 30;
-
-    // put this new text in the texts array
-    this.texts.push(text);
-
-    // redraw everything
-    this._draw();
-
+    newText.on('dblclick dbltap', function(evt) {
+       console.log('double tapped');
+        this.setText.text("#BERN#BERN");
+        this.draw();
+    });
+  
+    this.textLayer.add(newText);
+    newText.draw();
 }
 
-// clear the canvas & redraw all texts
-Meme.prototype._draw = function() {
-    this.foregroundCtx.clearRect(0, 0, this.foreground.width, this.foreground.height);
-    for (var i = 0; i < this.texts.length; i++) {
-        var text = this.texts[i];
-        this.foregroundCtx.fillText(text.text, text.x, text.y);
-    }
-}
-
-// test if x,y is inside the bounding box of texts[textIndex]
-Meme.prototype._textHittest = function(x, y, textIndex) {
-    var text = this.texts[textIndex];
-    return (x >= text.x && x <= text.x + text.width && y >= text.y - text.height && y <= text.y);
-}
-
-// handle mousedown events
-// iterate through texts[] and see if the user
-// mousedown'ed on one of them
-// If yes, set the selectedText to the index of that text
-Meme.prototype._handleMouseDown = function(e) {
-    
-    e.preventDefault();
-    
-    this.startX = parseInt(e.clientX - this.offsetX);
-    this.startY = parseInt(e.clientY - this.offsetY);
-
-    // Put your mousedown stuff here
-    for (var i = 0; i < this.texts.length; i++) {
-        if (this._textHittest(this.startX, this.startY, i)) {
-            this.selectedText = i;
-        }
-    }
-}
-
-// done dragging
-Meme.prototype._handleMouseUp = function(e) {
-    e.preventDefault();
-    this.selectedText = -1;
-}
-
-// also done dragging
-Meme.prototype._handleMouseOut = function(e) {
-    e.preventDefault();
-    this.selectedText = -1;
-}
-
-// handle mousemove events
-// calc how far the mouse has been dragged since
-// the last mousemove event and move the selected text
-// by that distance
-Meme.prototype._handleMouseMove = function(e) {
-
-    if (this.selectedText < 0) {
-        return;
-    }
-
-    e.preventDefault();
-    mouseX = parseInt(e.clientX - this.offsetX);
-    mouseY = parseInt(e.clientY - this.offsetY);
-
-    // Put your mousemove stuff here
-    var dx = mouseX - this.startX;
-    var dy = mouseY - this.startY;
-    this.startX = mouseX;
-    this.startY = mouseY;
-
-    var text = this.texts[this.selectedText];
-    text.x += dx;
-    text.y += dy;
-    this._draw();
-}
-
-Meme.prototype._handleMoustDoubleClick = function(e) {
-    mouseX = parseInt(e.clientX - this.offsetX);
-    mouseY = parseInt(e.clientY - this.offsetY);
-
-    // Put your mousedown stuff here
-    for (var i = 0; i < this.texts.length; i++) {
-        if (this._textHittest(mouseX, mouseY, i)) {
-            this.selectedText = i;
-        }
-    }
-
-    if(this.selectedText < 0) {
-        this.addText("#BERN", mouseX, mouseY);
-        return;
-    }
-
-    e.preventDefault();
-
-    // do text editing here
-}
 
 module.exports = Meme;
